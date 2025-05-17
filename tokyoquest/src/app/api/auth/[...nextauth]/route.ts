@@ -3,7 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import axios from "axios";
 import { JWT } from "next-auth/jwt";
 
-const backendURL = process.env.NEXT_PUBLIC_DJANGO_PUBLIC_API_URL as string;
+const backendURL = process.env.NEXT_PUBLIC_API_URL as string;
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
     try {
@@ -28,6 +28,18 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 }
 
 export const authOptions: NextAuthOptions = {
+    // Secret for NextAuth.js
+    secret: process.env.NEXTAUTH_SECRET,
+
+    // Use JWT strategy for sessions
+    session: {
+        strategy: "jwt",
+    },
+
+    pages: {
+        signIn: "/login",
+    },
+
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -35,7 +47,7 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        // サインイン時：DjangoからJWT取得
+        // Called when user signs in
         async signIn({ account, user }) {
             try {
                 const res = await axios.post(`${backendURL}/accounts/google/`, {
@@ -43,9 +55,10 @@ export const authOptions: NextAuthOptions = {
                     id_token: account?.id_token,
                 });
 
-                user.access = res.data.access;
-                user.refresh = res.data.refresh;
-                user.user = res.data.user;
+                // Attach tokens and user info for jwt callback
+                (user as any).access = res.data.access;
+                (user as any).refresh = res.data.refresh;
+                (user as any).user = res.data.user;
 
                 return true;
             } catch (err) {
@@ -54,17 +67,19 @@ export const authOptions: NextAuthOptions = {
             }
         },
 
-        // JWT 作成 or 更新
+        // Called to create or update JWT
         async jwt({ token, user }) {
-            if (user?.access && user?.refresh) {
+            // Initial sign-in
+            if (user && (user as any).access) {
                 return {
-                    accessToken: user.access,
-                    refreshToken: user.refresh,
-                    accessTokenExpires: Date.now() + 1 * 60 * 1000,
-                    user: user.user,
+                    accessToken: (user as any).access,
+                    refreshToken: (user as any).refresh,
+                    accessTokenExpires: Date.now() + 30 * 60 * 1000,
+                    user: (user as any).user,
                 };
             }
 
+            // Return previous token if it's still valid
             if (
                 token.accessTokenExpires &&
                 Date.now() < token.accessTokenExpires
@@ -72,15 +87,16 @@ export const authOptions: NextAuthOptions = {
                 return token;
             }
 
-            return await refreshAccessToken(token);
+            // Access token has expired, try to refresh it
+            return await refreshAccessToken(token as JWT);
         },
 
-        // セッションにトークンを渡す
+        // Make JWT available in session
         async session({ session, token }) {
-            session.accessToken = token.accessToken;
-            session.refreshToken = token.refreshToken;
-            session.error = token.error;
-            session.user = token.user;
+            session.accessToken = (token as any).accessToken;
+            session.refreshToken = (token as any).refreshToken;
+            session.error = (token as any).error;
+            session.user = (token as any).user;
             return session;
         },
     },

@@ -1,60 +1,28 @@
-// app/profile/UserEditModal.tsx
 "use client";
 
 import { useState } from "react";
-import { getSession } from "next-auth/react";
+import { api } from "@/lib/api";
 
-export default function UserEditModal({ user, token, onUpdated }: {
-    user: any;
-    token: string;
+interface UserEditModalProps {
     onUpdated: () => void;
-}) {
-    const [firstName, setFirstName] = useState(user.first_name || "");
-    const [lastName, setLastName] = useState(user.last_name || "");
-    const [contactAddress, setContactAddress] = useState(user.contact_address || "");
+}
+
+export default function UserEditModal({ onUpdated }: UserEditModalProps) {
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [contactAddress, setContactAddress] = useState("");
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState("");
 
     const handleSubmit = async () => {
         setSaving(true);
         setMessage("");
-
         try {
-            // 🔹 1回目の更新リクエスト
-            let res = await fetch(`${process.env.NEXT_PUBLIC_DJANGO_PUBLIC_API_URL}/accounts/update/`, {
-                method: "PATCH",
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    first_name: firstName,
-                    last_name: lastName,
-                    contact_address: contactAddress,
-                }),
+            await api.patch("http://127.0.0.1:8000/api/accounts/update/", {
+                first_name: firstName,
+                last_name: lastName,
+                contact_address: contactAddress,
             });
-
-            // 🔹 もしトークン失効していたら refresh → 再試行
-            if (res.status === 401) {
-
-                const newSession = await getSession();
-
-                res = await fetch(`${process.env.NEXT_PUBLIC_DJANGO_PUBLIC_API_URL}/accounts/update/`, {
-                    method: "PATCH",
-                    headers: {
-                        Authorization: `Bearer ${newSession?.accessToken}`,
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({
-                        first_name: firstName,
-                        last_name: lastName,
-                        contact_address: contactAddress,
-                    }),
-                });
-            }
-
-            if (!res.ok) throw new Error("更新に失敗しました");
-
             setMessage("プロフィールを更新しました！");
             onUpdated();
         } catch (err) {
