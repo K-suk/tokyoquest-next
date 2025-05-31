@@ -3,9 +3,10 @@
 import { useSession, signIn } from "next-auth/react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function LoginPage() {
-    const { data: session, status } = useSession();
+    const { status } = useSession();
     const router = useRouter();
 
     useEffect(() => {
@@ -15,25 +16,73 @@ export default function LoginPage() {
     }, [status, router]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
-            <div className="w-full max-w-md p-8 bg-white rounded-xl shadow-md text-center">
-                <h1 className="text-3xl font-bold mb-6">ログイン</h1>
-                <button
-                    onClick={() => signIn("google", { callbackUrl: "/profile" })}
-                    className="flex items-center justify-center w-full py-3 px-4 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
-                >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 488 512"
-                        className="w-5 h-5"
+        <div className="min-h-screen relative overflow-hidden">
+            {/* Dummy background image - to be replaced */}
+            <div className="absolute inset-0 z-0">
+                <div className="w-full h-full bg-black opacity-70">
+                    <Image
+                        src="/images/login-bg.png"
+                        alt="Tokyo city collage"
+                        fill
+                        className="object-cover"
+                        priority
+                    />
+                </div>
+            </div>
+
+            <div className="relative z-10 min-h-screen flex flex-col items-center justify-center">
+                {/* Welcome text */}
+                <div className="text-white font-bold mb-0">
+                    <h1 className="text-7xl md:text-9xl leading-tight">
+                        Welcome to<br />
+                        city of<br />
+                        infinity side<br />
+                        quests
+                    </h1>
+                </div>
+
+                {/* Tokyo QUEST Logo */}
+                <div className="mb-8 text-center">
+                    {/* Placeholder for logo - to be replaced */}
+                    <div className="relative">
+                        {/* <h1 className="text-white text-5xl font-bold">東京 QUEST</h1>
+                        <div className="w-full h-2 bg-red-600 mt-2"></div> */}
+                        <Image src="/images/tokyoquest_logo.png" alt="Tokyo QUEST Logo" width={400} height={120} />
+                    </div>
+                </div>
+
+                {/* Google sign-in button */}
+                <div className="w-full max-w-xs">
+                    <button
+                        onClick={() => signIn("google", { callbackUrl: "/profile" })}
+                        className="flex items-center justify-center w-full py-3 px-4 bg-white text-gray-800 rounded-full hover:bg-gray-100 transition shadow-lg"
                     >
-                        <path
-                            fill="currentColor"
-                            d="M488 261.8c0-17.8-1.6-35.5-4.7-52.6H249v99.6h134.3c-5.8 31.5-23.4 58.3-49.8 76.2v63.4h80.5c47.1-43.4 74-107.4 74-186.6zM249 480c67.5 0 124.3-22.4 165.7-60.8l-80.5-63.4c-22.4 15-51 24-85.2 24-65.5 0-121-44.3-140.8-103.6H23.5v65.1C64.8 436.1 150 480 249 480zM108.2 286.4c-4.8-14.4-7.6-29.7-7.6-45.4s2.8-31 7.6-45.4V130.5H23.5C8.3 167.4 0 206.9 0 246.9s8.3 79.5 23.5 116.4l84.7-76.9zM249 97.3c35.3 0 67.1 12.1 92 35.8l69-69C373.7 25.7 316.9 0 249 0 150 0 64.8 43.9 23.5 109.5l84.7 76.9C128 141.6 183.5 97.3 249 97.3z"
-                        />
-                    </svg>
-                    <span className="ml-2 text-lg">Google でログイン</span>
-                </button>
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                fill="#4285F4"
+                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                            />
+                            <path
+                                fill="#34A853"
+                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                            />
+                            <path
+                                fill="#FBBC05"
+                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                            />
+                            <path
+                                fill="#EA4335"
+                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                            />
+                        </svg>
+                        <span className="ml-3 text-lg font-medium">Continue with Google</span>
+                    </button>
+                </div>
             </div>
         </div>
     );
