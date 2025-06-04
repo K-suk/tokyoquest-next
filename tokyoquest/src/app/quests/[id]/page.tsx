@@ -1,10 +1,15 @@
 // app/quests/[id]/page.tsx
-import React from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import QuestDetailClient from './components/QuestDetailClient';
 
-interface QuestDetail {
+import React from "react";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import QuestDetailClient from "./components/QuestDetailClient";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+
+export const revalidate = 86400; // 24時間キャッシュ（ISR）
+
+interface QuestMeta {
     id: number;
     title: string;
     description: string;
@@ -13,43 +18,42 @@ interface QuestDetail {
     mapUrl?: string;
     onlyLocals?: string;
     officialUrl?: string;
-    averageRating: number;
-    reviewCount: number;
-    reviews: {
-        id: number;
-        rating: number;
-        date: string;
-        title: string;
-        comment: string;
-    }[];
 }
 
-interface Params {
+interface Props {
     params: { id: string };
 }
 
-export default async function QuestDetailPage({ params }: Params) {
+export default async function QuestDetailPage({ params }: Props) {
+    // ① params は非同期APIになったので await してから使う
+    const { id } = await params;
+
+    // ② サーバーセッションをチェック
     const session = await getServerSession(authOptions);
-    if (!session?.accessToken) {
-        // ログインしていなければ何も返さない or リダイレクト
-        return null;
+    if (!session) {
+        redirect("/login");
     }
 
-    // Django の quest_detail エンドポイントを叩く
-    const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/quests/${params.id}/`,
-        {
-            headers: {
-                Authorization: `Bearer ${session.accessToken}`,
-            },
-            cache: 'no-store', // 常に最新を取得
-        }
-    );
+    // ③ 内部の Next.js API Route を叩く（絶対URL＋Cookie を明示的に渡す）
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const cookieHeader = cookies().toString();
+
+    const res = await fetch(`${baseUrl}/api/quests/${id}/meta/`, {
+        headers: {
+            // HTTP-only Cookie を明示的に渡す
+            cookie: cookieHeader,
+        },
+        next: { revalidate },
+    });
+
+    if (res.status === 401) {
+        redirect("/login");
+    }
     if (!res.ok) {
-        return <p className="p-4 text-center">Quest not found.</p>;
+        return <p className="p-4 text-center">Quest が見つかりません。</p>;
     }
+    const questMeta: QuestMeta = await res.json();
 
-    const quest: QuestDetail = await res.json();
-
-    return <QuestDetailClient quest={quest} />;
+    // ④ クライアントコンポーネントをレンダー
+    return <QuestDetailClient questMeta={questMeta} questId={Number(id)} />;
 }

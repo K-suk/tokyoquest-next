@@ -28,7 +28,13 @@ const Appbar = () => {
                         <Drawer.Content>
                             <Drawer.Body className="bg-red-500 text-white">
                                 <li className="text-2xl my-8">
+                                    <Link href="/" onClick={() => setOpen(false)}>Home</Link>
+                                </li>
+                                <li className="text-2xl my-8">
                                     <Link href="/profile" onClick={() => setOpen(false)}>Profile</Link>
+                                </li>
+                                <li className="text-2xl my-8">
+                                    <Link href="/saved_quests" onClick={() => setOpen(false)}>Saved Quests</Link>
                                 </li>
                                 <li className="text-2xl">
                                     <button onClick={() => signOut({ callbackUrl: "/login" })}>

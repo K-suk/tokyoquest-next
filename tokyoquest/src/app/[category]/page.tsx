@@ -1,7 +1,9 @@
-import { notFound } from "next/navigation";
+// app/[category]/page.tsx
+
 import Image from "next/image";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { redirect, notFound } from "next/navigation";
+import { getToken } from "next-auth/jwt";
+import { cookies } from "next/headers";
 
 type Quest = {
     id: number;
@@ -11,26 +13,44 @@ type Quest = {
     tags: { id: number; name: string }[];
 };
 
-export default async function CategoryPage({ params }: { params: { category: string } }) {
-    const { category } = await params; // await params as required by Next.js
+interface Props {
+    params: { category: string };
+}
+
+export default async function CategoryPage({ params }: Props) {
+    // （1） params は非同期 API になったので await して展開
+    const { category } = await params;
     const decodedCategory = decodeURIComponent(category);
 
-    // 認証トークン取得
-    const session = await getServerSession(authOptions);
-    if (!session?.accessToken) return notFound();
+    // （2）cookie を await して文字列化
+    const cookieStore = await cookies();
+    const cookieHeader = cookieStore.toString();
 
-    // API URL組み立て
-    const base = process.env.NEXT_PUBLIC_API_URL!;
-    const url = `${base}/quests/search/?tag=${encodeURIComponent(decodedCategory)}`;
-
-    // データ取得（認証ヘッダー付き）
-    const res = await fetch(url, {
-        cache: "no-store",
-        headers: {
-            'Authorization': 'Bearer ' + session.accessToken
-        }
+    // （3）getToken() で HTTP-only Cookie から JWT を取り出す
+    const token = await getToken({
+        req: { headers: { cookie: cookieHeader } },
+        secret: process.env.NEXTAUTH_SECRET,
     });
-    if (!res.ok) return notFound();
+    if (!token?.accessToken) {
+        // 未ログイン or トークン切れなら /login へ飛ばす
+        redirect("/login");
+    }
+
+    // （4）Next.js の API Route を絶対 URL で叩く
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+    const apiUrl = `${baseUrl}/api/category/${encodeURIComponent(category)}`;
+    const res = await fetch(apiUrl, {
+        headers: { cookie: cookieHeader },
+        cache: "no-store",
+    });
+
+    if (res.status === 401) {
+        redirect("/login");
+    }
+    if (!res.ok) {
+        return notFound();
+    }
+
     const data = await res.json();
     const quests: Quest[] = Array.isArray(data) ? data : data.results;
 
